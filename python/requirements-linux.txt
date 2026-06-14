@@ -13,4 +13,3 @@ scikit-learn
 scipy
 typing-extensions
 setuptools<81
-basic-pitch --no-deps

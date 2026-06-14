@@ -16,7 +16,8 @@ COPY . .
 
 RUN npm run build
 
-RUN pip3 install --no-cache-dir --break-system-packages -r python/requirements-linux.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r python/requirements-linux.txt \
+  && pip3 install --no-cache-dir --break-system-packages basic-pitch --no-deps
 
 RUN sed -i 's/\r$//' scripts/docker-entrypoint.sh && chmod +x scripts/docker-entrypoint.sh
 

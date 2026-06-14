@@ -34,14 +34,14 @@ You need:
 ### 1.1 Create a private repo
 
 1. Go to [https://github.com/new](https://github.com/new)
-2. Name: `ai-piano-examiner`
+2. Name: `piano-examiner`
 3. Visibility: **Private**
 4. Do **not** add README (you already have one)
 5. Click **Create repository**
 
 ### 1.2 Push from your PC
 
-Open **PowerShell** in your project folder:
+Open **PowerShell** in your project folder (the folder name on your PC may differ from the GitHub repo name):
 
 ```powershell
 cd "C:\Users\User\OneDrive\Documents\Cursor projects\ai-piano-examiner"
@@ -56,7 +56,7 @@ Confirm `.env.local` and `data/` are **not** listed (they are in `.gitignore`).
 ```powershell
 git commit -m "Initial commit — piano examiner app"
 git branch -M main
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/ai-piano-examiner.git
+git remote add origin https://github.com/YOUR_GITHUB_USERNAME/piano-examiner.git
 git push -u origin main
 ```
 
@@ -76,12 +76,12 @@ Sign in to GitHub if prompted.
 
 1. In the Render dashboard, click **New +** → **Web Service**
 2. Connect your GitHub account if asked
-3. Select the **`ai-piano-examiner`** repository
+3. Select the **`piano-examiner`** repository
 4. Configure:
 
 | Setting | Value |
 |---------|--------|
-| **Name** | `ai-piano-examiner` (or any name — becomes part of your URL) |
+| **Name** | `piano-examiner` (this becomes part of your URL) |
 | **Region** | Pick closest to you (e.g. Frankfurt for UK) |
 | **Branch** | `main` |
 | **Runtime** | **Docker** |
@@ -118,7 +118,7 @@ Applying database schema…
 Starting Piano Examiner on port 10000…
 ```
 
-When status shows **Live**, click your URL: `https://ai-piano-examiner.onrender.com`
+When status shows **Live**, click your URL: `https://piano-examiner.onrender.com`
 
 ---
 
@@ -149,9 +149,7 @@ AI evaluation is heavy. On free tier, long recordings may fail with out-of-memor
 **Tips:**
 
 - Use shorter recordings while testing
-- Upgrade to **Starter** ($7/mo, 512 MB shared → actually starter might have more - Render Starter is 512MB too. Standard is 2GB at $25. Let me check - Free is 512MB, Starter $7 is 512MB, Standard $25 is 2GB)
-
-I'll say: if evaluation fails in logs with OOM, upgrade to Standard or try shorter audio.
+- If logs show out-of-memory errors, upgrade to **Standard** (2 GB RAM) or use shorter audio
 
 ### Data loss on redeploy
 
@@ -179,7 +177,7 @@ Render auto-deploys from GitHub. Watch the **Logs** tab for the new build.
 
 | Problem | What to do |
 |---------|------------|
-| Build fails on pip/npm | Open **Logs** → scroll to the error; often out of memory during build — retry deploy |
+| Build fails on pip/npm | Open **Logs** → scroll to the error. Common fix: `basic-pitch --no-deps` cannot go inside `requirements-linux.txt` — see **Build error: basic-pitch --no-deps** below |
 | `502 Bad Gateway` | Service still starting — wait 1–2 min after deploy |
 | Very slow first load | Free tier waking from sleep — normal |
 | Evaluation fails | Check logs for Python errors; confirm `GEMINI_API_KEY` if using Gemini |
@@ -194,6 +192,36 @@ Render dashboard → your service → **Logs**
 
 **Manual Deploy** → **Deploy latest commit**
 
+### Build error: `Invalid requirement: basic-pitch --no-deps`
+
+If logs show:
+
+```
+ERROR: Invalid requirement: basic-pitch --no-deps
+pip3: error: no such option: --no-deps
+```
+
+`--no-deps` is a **pip command flag**, not valid inside a requirements file. Fix in your repo, push to GitHub, and redeploy:
+
+**1. Edit `python/requirements-linux.txt`** — remove the last line `basic-pitch --no-deps`
+
+**2. Edit `Dockerfile`** — change the pip line to two steps:
+
+```dockerfile
+RUN pip3 install --no-cache-dir --break-system-packages -r python/requirements-linux.txt \
+  && pip3 install --no-cache-dir --break-system-packages basic-pitch --no-deps
+```
+
+**3. Commit and push:**
+
+```powershell
+git add python/requirements-linux.txt Dockerfile
+git commit -m "Fix Render build: install basic-pitch separately"
+git push
+```
+
+Render will auto-rebuild.
+
 ---
 
 ## Optional: one-click Blueprint
@@ -203,7 +231,7 @@ Create a file named `render.yaml` in the project root (or use **New + → Web Se
 ```yaml
 services:
   - type: web
-    name: ai-piano-examiner
+    name: piano-examiner
     runtime: docker
     plan: free
     healthCheckPath: /login
