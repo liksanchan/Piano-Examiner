@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    volumes:
+      - piano-data:/app/data
+    restart: unless-stopped
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - web
+
+volumes:
+  piano-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  web:

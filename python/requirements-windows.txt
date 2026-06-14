@@ -1,0 +1,16 @@
+# Windows + Python 3.12 install (avoids TensorFlow conflict in requirements.txt)
+# Run: py -3.12 -m pip install -r python/requirements-windows.txt
+
+onnxruntime
+numpy<2
+pretty_midi
+pydub
+librosa
+soundfile
+mir-eval
+resampy<0.4.3
+scikit-learn
+scipy
+typing-extensions
+setuptools<81
+basic-pitch --no-deps

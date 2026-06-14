@@ -1,0 +1,9 @@
+# HTTP — works with http://YOUR_VM_IP (no microphone on some phones without HTTPS)
+:80 {
+	reverse_proxy app:3000
+}
+
+# HTTPS — uncomment and replace with your domain after DNS points to the VM:
+# piano.yourdomain.com {
+# 	reverse_proxy app:3000
+# }

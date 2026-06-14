@@ -1,36 +1,152 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Piano Examiner
 
-## Getting Started
+An AI-powered piano performance examiner. Run locally or deploy online with Docker (Render or Oracle Cloud).
 
-First, run the development server:
+Upload sheet music, record yourself playing, and receive structured feedback in ABRSM or Trinity grading modes.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Tech stack
+
+- **Frontend:** Next.js (App Router), React, Tailwind CSS
+- **Database:** SQLite (local file via libsql)
+- **File storage:** Local filesystem (`data/uploads/`)
+- **Auth:** Email + password with signed session cookies
+
+## Getting started
+
+### 1. Install dependencies
+
+```powershell
+cd ai-piano-examiner
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+copy .env.local.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Edit `.env.local` and set `SESSION_SECRET` to a random string of at least 32 characters.
 
-## Learn More
+### 3. Create the database
 
-To learn more about Next.js, take a look at the following resources:
+```powershell
+npm run db:push
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This creates `data/piano-examiner.db` with all required tables.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Run the app
 
-## Deploy on Vercel
+```powershell
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Local data
+
+All data is stored on disk:
+
+| Path | Contents |
+|---|---|
+| `data/piano-examiner.db` | SQLite database (users, sheet music, performances) |
+| `data/uploads/` | Uploaded PDFs, JPEGs, and audio recordings |
+
+To reset everything, stop the dev server and delete the `data/` folder, then run `npm run db:push` again.
+
+## Deploy online (free)
+
+| Guide | When to use |
+|-------|-------------|
+| **[DEPLOY-RENDER.md](./DEPLOY-RENDER.md)** | **Start here** — Render free tier, GitHub + Docker, no SSH |
+| **[DEPLOY.md](./DEPLOY.md)** | Oracle Cloud VM — if you get free Ampere capacity |
+
+```bash
+docker compose up -d --build   # Oracle / own Linux server only
+```
+
+## Useful commands
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run db:push` | Apply schema to SQLite |
+| `npm run db:studio` | Open Drizzle Studio to inspect the database |
+| `npm run build` | Production build |
+| `docker compose up -d --build` | Production deploy on Oracle / own Linux server (see DEPLOY.md) |
+
+## Project structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── auth/       # signup, login, logout
+│   │   ├── evaluate/   # placeholder AI judge
+│   │   └── files/      # authenticated file serving
+│   ├── dashboard/
+│   ├── login/
+│   └── signup/
+├── components/
+│   ├── auth/
+│   └── layout/
+└── lib/
+    ├── auth/           # session, password hashing
+    ├── db/             # Drizzle schema + SQLite connection
+    └── storage/        # local filesystem helpers
+```
+
+## API routes
+
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/auth/signup` | POST | Create account and sign in |
+| `/api/auth/login` | POST | Sign in |
+| `/api/auth/logout` | POST | Sign out |
+| `/api/evaluate` | POST | AI evaluation (Basic Pitch + Essentia + Gemini) |
+| `/api/files/[...path]` | GET | Serve user files (auth required) |
+
+## AI evaluation pipeline
+
+When `EVALUATION_MODE=auto` (default), submitting a performance runs:
+
+1. **Spotify Basic Pitch** — transcribes reference + student audio to MIDI
+2. **Essentia** (or librosa on Windows) — tempo/dynamics analysis on audio; Essentia pitch-contour similarity on MIDI where available
+3. **MIDI comparison** — note accuracy, timing error, missing/extra notes
+4. **Google Gemini** — writes ABRSM/Trinity feedback from the metrics (falls back to rule-based scoring if Gemini fails)
+
+### Setup
+
+1. Install **Python 3.10+** and **ffmpeg** (required for WebM/MP3 conversion).
+2. Install Python dependencies:
+
+```powershell
+npm run python:setup
+# or: pip install -r python/requirements.txt
+```
+
+3. Add to `.env.local`:
+
+```env
+EVALUATION_MODE=auto
+GEMINI_API_KEY=your-key-from-google-ai-studio
+PYTHON_PATH=python
+```
+
+Set `EVALUATION_MODE=mock` to use placeholder scores without Python/Gemini.
+
+Analysis can take several minutes per submission (Basic Pitch is CPU-heavy).
+
+## Next steps
+
+- Cloud hosting if you want access beyond your laptop
+
+## Using the app
+
+1. **Sign up** and open the **Dashboard**
+2. **Upload** a PDF or JPEG of your sheet music
+3. Click **Practice** on a piece to open the recording studio
+4. Choose **ABRSM** or **Trinity** mode and evaluation criteria
+5. **Record** your performance, then **Submit for examiner feedback**
+6. View your results, **download a PDF report**, or **share to WhatsApp**

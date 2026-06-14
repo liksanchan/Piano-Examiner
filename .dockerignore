@@ -1,0 +1,14 @@
+node_modules
+.next
+data
+.git
+.gitignore
+*.md
+!DEPLOY.md
+.env*
+!.env.production.example
+.cursor
+coverage
+out
+build
+*.db
