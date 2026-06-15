@@ -86,7 +86,13 @@ export async function getCurrentUser(): Promise<
     columns: { id: true, email: true, displayName: true },
   });
 
-  return user ?? null;
+  if (!user) {
+    // Stale cookie (e.g. after Render redeploy wiped the DB) — clear it to avoid redirect loops.
+    await clearSessionCookie();
+    return null;
+  }
+
+  return user;
 }
 
 export async function jsonWithSession<T extends Record<string, unknown>>(
