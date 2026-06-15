@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AudioCapturePanel } from "@/components/audio/AudioCapturePanel";
 import { useAudioCapture } from "@/hooks/use-audio-capture";
 import type { ExaminerMode } from "@/lib/db/schema";
+import { audioFileForUpload } from "@/lib/upload/form-audio";
 import {
   clearPracticeRecording,
   loadPracticeRecording,
@@ -146,8 +147,7 @@ export function RecordingStudio({
       } else {
         formData.append(
           "audio",
-          capture.audioBlob,
-          capture.fileName ?? "recording.webm",
+          audioFileForUpload(capture.audioBlob, capture.fileName ?? "recording.webm"),
         );
       }
 
@@ -181,10 +181,12 @@ export function RecordingStudio({
       const evalData = await evalRes.json().catch(() => ({}));
 
       if (!evalRes.ok) {
+        const fallback =
+          evalRes.status === 502 || evalRes.status === 503
+            ? "The server may still be waking up or ran out of memory. Wait a minute and try again with a shorter recording."
+            : "Evaluation failed.";
         throw new Error(
-          typeof evalData.error === "string"
-            ? evalData.error
-            : "Evaluation failed.",
+          typeof evalData.error === "string" ? evalData.error : fallback,
         );
       }
 
@@ -275,6 +277,7 @@ export function RecordingStudio({
             mode={capture.mode}
             onModeChange={capture.setMode}
             recording={capture.recording}
+            recordingSeconds={capture.recordingSeconds}
             audioUrl={capture.audioUrl}
             fileName={capture.fileName}
             disabled={submitting}
@@ -305,7 +308,7 @@ export function RecordingStudio({
           disabled={!capture.audioBlob || submitting || capture.recording || restoring}
           className="mt-5 w-full rounded-lg bg-amber-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
-          {submitting ? "Analyzing your performance…" : "Submit for examiner feedback"}
+          {submitting ? "Analyzing your performance… (can take 1–3 min)" : "Submit for examiner feedback"}
         </button>
 
         {lastResultId && (

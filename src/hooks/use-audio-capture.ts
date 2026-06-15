@@ -19,6 +19,7 @@ export function useAudioCapture() {
 
   const [mode, setMode] = useState<AudioCaptureMode>("record");
   const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -131,6 +132,21 @@ export function useAudioCapture() {
   );
 
   useEffect(() => {
+    if (!recording) {
+      setRecordingSeconds(0);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const tick = () => {
+      setRecordingSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    };
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [recording]);
+
+  useEffect(() => {
     return () => revokePlaybackUrl();
   }, [revokePlaybackUrl]);
 
@@ -138,6 +154,7 @@ export function useAudioCapture() {
     mode,
     setMode,
     recording,
+    recordingSeconds,
     audioUrl,
     audioBlob,
     fileName,

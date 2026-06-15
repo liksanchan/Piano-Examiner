@@ -103,6 +103,7 @@ function ReplaceAudioForm({ pieceId, onDone }: { pieceId: string; onDone: () => 
         mode={capture.mode}
         onModeChange={capture.setMode}
         recording={capture.recording}
+        recordingSeconds={capture.recordingSeconds}
         audioUrl={capture.audioUrl}
         fileName={capture.fileName}
         disabled={loading}

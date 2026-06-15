@@ -7,6 +7,7 @@ import { generateGeminiReview } from "@/lib/evaluation/gemini";
 import { runAnalysisPipeline } from "@/lib/evaluation/python-pipeline";
 import { buildRuleBasedEvaluation } from "@/lib/evaluation/rules";
 import type { EvaluationOptions, EvaluationResult } from "@/lib/evaluation/types";
+import { verifyAudioFile } from "@/lib/evaluation/verify-audio-files";
 
 function resolveAudioPath(relativePath: string): string {
   return path.join(getUploadDir(), relativePath);
@@ -19,6 +20,9 @@ export async function evaluatePerformance(
   if (!piece.referenceAudioPath) {
     throw new Error("This song has no reference audio. Upload a reference recording first.");
   }
+
+  verifyAudioFile("Reference audio", piece.referenceAudioPath);
+  verifyAudioFile("Your performance", performance.audioPath);
 
   const options: EvaluationOptions = {
     examinerMode: performance.examinerMode,

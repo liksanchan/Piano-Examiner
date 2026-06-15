@@ -1,12 +1,14 @@
 "use client";
 
 import { AUDIO_ACCEPT, AUDIO_UPLOAD_HINT } from "@/lib/upload/constants";
+import { formatRecordingDuration } from "@/lib/audio/recording";
 import type { AudioCaptureMode } from "@/hooks/use-audio-capture";
 
 interface AudioCapturePanelProps {
   mode: AudioCaptureMode;
   onModeChange: (mode: AudioCaptureMode) => void;
   recording: boolean;
+  recordingSeconds?: number;
   audioUrl: string | null;
   fileName: string | null;
   disabled?: boolean;
@@ -22,6 +24,7 @@ export function AudioCapturePanel({
   mode,
   onModeChange,
   recording,
+  recordingSeconds = 0,
   audioUrl,
   fileName,
   disabled = false,
@@ -87,9 +90,9 @@ export function AudioCapturePanel({
           )}
 
           {recording && (
-            <span className="flex items-center gap-2 text-sm text-red-600">
+            <span className="flex items-center gap-2 text-sm font-medium tabular-nums text-red-600">
               <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
-              Recording…
+              Recording {formatRecordingDuration(recordingSeconds)}
             </span>
           )}
 

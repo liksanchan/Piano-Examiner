@@ -92,6 +92,7 @@ export function PieceUpload() {
             mode={capture.mode}
             onModeChange={capture.setMode}
             recording={capture.recording}
+            recordingSeconds={capture.recordingSeconds}
             audioUrl={capture.audioUrl}
             fileName={capture.fileName}
             disabled={loading}

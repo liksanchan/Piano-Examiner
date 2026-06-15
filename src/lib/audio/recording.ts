@@ -14,6 +14,12 @@ const MIME_TO_FILENAME: Record<string, string> = {
   "audio/ogg": "recording.ogg",
 };
 
+export function formatRecordingDuration(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 export function isRecordingSupported(): boolean {
   if (typeof window === "undefined") return false;
   return Boolean(

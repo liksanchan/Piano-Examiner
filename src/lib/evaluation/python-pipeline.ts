@@ -69,17 +69,29 @@ export async function runAnalysisPipeline(
       );
     });
 
-    proc.on("close", (code) => {
+    proc.on("close", (code, signal) => {
       clearTimeout(timer);
 
       if (code !== 0) {
-        let message = stderr.trim() || `Python pipeline exited with code ${code}`;
+        let message = stderr.trim() || `Python pipeline exited with code ${code ?? "unknown"}`;
+
+        if (code === 137 || signal === "SIGKILL") {
+          message =
+            "Analysis ran out of memory. Try a shorter recording (under 2 minutes), or use a paid Render plan with more RAM.";
+        }
+
         try {
           const parsed = JSON.parse(stderr) as { error?: string };
           if (parsed.error) message = parsed.error;
         } catch {
           // use raw stderr
         }
+
+        if (message.includes("Audio file not found")) {
+          message +=
+            " On Render's free tier, uploads can be lost after a redeploy — re-upload the reference and record again.";
+        }
+
         reject(new Error(message));
         return;
       }

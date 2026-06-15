@@ -6,9 +6,11 @@ import { performances, pieces } from "@/lib/db/schema";
 import type { ExaminerMode } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { saveUserFile } from "@/lib/storage/local";
-import { audioExtension, detectAudioType } from "@/lib/upload/detect-file-type";
+import { verifyAudioFile } from "@/lib/evaluation/verify-audio-files";
+import { audioExtension, MAX_AUDIO_BYTES } from "@/lib/upload/detect-file-type";
+import { parseFormDataAudio } from "@/lib/upload/form-audio";
 
-const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+const MIN_AUDIO_BYTES = 1000;
 
 function parseBool(value: FormDataEntryValue | null, fallback = true) {
   if (value === null) return fallback;
@@ -24,12 +26,12 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    const audio = formData.get("audio");
     const reusePerformanceId = String(formData.get("reusePerformanceId") ?? "");
     const pieceId = String(formData.get("pieceId") ?? "");
     const examinerMode = String(formData.get("examinerMode") ?? "abrsm") as ExaminerMode;
+    const hasAudioField = formData.get("audio");
 
-    if (!(audio instanceof File) && !reusePerformanceId) {
+    if (!hasAudioField && !reusePerformanceId) {
       return NextResponse.json({ error: "Audio recording is required." }, { status: 400 });
     }
 
@@ -47,16 +49,24 @@ export async function POST(request: Request) {
 
     const isAccuracyMode = examinerMode === "accuracy100";
 
-    if (audio instanceof File) {
-      if (audio.size > MAX_AUDIO_BYTES) {
+    let parsedAudio: Awaited<ReturnType<typeof parseFormDataAudio>> | null = null;
+    if (hasAudioField && !reusePerformanceId) {
+      parsedAudio = await parseFormDataAudio(formData);
+      if (!parsedAudio.ok) {
+        return NextResponse.json({ error: parsedAudio.error }, { status: 400 });
+      }
+      if (parsedAudio.size > MAX_AUDIO_BYTES) {
         return NextResponse.json(
           { error: "Recording must be 50 MB or smaller." },
           { status: 400 },
         );
       }
-      if (!detectAudioType(audio.type, audio.name)) {
+      if (parsedAudio.size < MIN_AUDIO_BYTES) {
         return NextResponse.json(
-          { error: "Only MP3, WAV, WebM, M4A, MP4, and OGG audio files are allowed." },
+          {
+            error:
+              "That recording looks empty. Record again, allow microphone access, or upload a file.",
+          },
           { status: 400 },
         );
       }
@@ -90,16 +100,28 @@ export async function POST(request: Request) {
         );
       }
 
+      try {
+        verifyAudioFile("Your performance", source.audioPath);
+      } catch (error) {
+        return NextResponse.json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Could not reuse the previous recording.",
+          },
+          { status: 400 },
+        );
+      }
+
       audioPath = source.audioPath;
-    } else if (audio instanceof File) {
-      const audioType = detectAudioType(audio.type, audio.name) ?? "webm";
-      const filename = `${id}${audioExtension(audioType)}`;
-      const buffer = Buffer.from(await audio.arrayBuffer());
+    } else if (parsedAudio?.ok) {
+      const filename = `${id}${audioExtension(parsedAudio.audioType)}`;
       audioPath = await saveUserFile(
         session.userId,
         "performances",
         filename,
-        buffer,
+        parsedAudio.buffer,
       );
     } else {
       return NextResponse.json({ error: "Audio recording is required." }, { status: 400 });
