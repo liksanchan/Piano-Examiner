@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  filenameForMimeType,
+  isRecordingSupported,
+  pickRecordingMimeType,
+  recordingErrorMessage,
+} from "@/lib/audio/recording";
 import { detectAudioType } from "@/lib/upload/detect-file-type";
 
 export type AudioCaptureMode = "record" | "upload";
@@ -9,6 +15,7 @@ export function useAudioCapture() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const playbackUrlRef = useRef<string | null>(null);
+  const mimeTypeRef = useRef<string>("audio/webm");
 
   const [mode, setMode] = useState<AudioCaptureMode>("record");
   const [recording, setRecording] = useState(false);
@@ -45,9 +52,27 @@ export function useAudioCapture() {
   const startRecording = useCallback(async () => {
     clearAudio();
 
+    if (!isRecordingSupported()) {
+      throw new Error(
+        "In-browser recording is not supported in this browser. Switch to Upload file instead.",
+      );
+    }
+
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (error) {
+      throw new Error(recordingErrorMessage(error));
+    }
+
+    try {
+      const mimeType = pickRecordingMimeType();
+      mimeTypeRef.current = mimeType ?? "audio/webm";
+
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
       chunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
@@ -55,16 +80,24 @@ export function useAudioCapture() {
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        setFromBlob(blob, "recording.webm");
+        const type = mimeTypeRef.current || recorder.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type });
+        const name = filenameForMimeType(type);
+        setFromBlob(blob, name);
+        stream.getTracks().forEach((t) => t.stop());
+      };
+
+      recorder.onerror = () => {
         stream.getTracks().forEach((t) => t.stop());
       };
 
       mediaRecorderRef.current = recorder;
-      recorder.start();
+      // Timeslices help Safari/iOS actually emit audio data.
+      recorder.start(250);
       setRecording(true);
-    } catch {
-      throw new Error("Microphone access denied or unavailable.");
+    } catch (error) {
+      stream.getTracks().forEach((t) => t.stop());
+      throw new Error(recordingErrorMessage(error));
     }
   }, [clearAudio, setFromBlob]);
 
@@ -97,6 +130,7 @@ export function useAudioCapture() {
     audioUrl,
     audioBlob,
     fileName,
+    recordingSupported: isRecordingSupported(),
     setFromBlob,
     clearAudio,
     startRecording,

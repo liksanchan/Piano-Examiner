@@ -26,6 +26,13 @@ export function PieceUpload() {
       return;
     }
 
+    if (capture.audioBlob.size < 1000) {
+      setError(
+        "That recording looks empty. Record again, allow microphone access, or use Upload file.",
+      );
+      return;
+    }
+
     setError(null);
     setLoading(true);
     setProgress("Uploading…");
@@ -113,6 +120,11 @@ export function PieceUpload() {
         </div>
         <p className="mt-2 text-xs text-stone-500">
           The AI will compare your practice recordings against this reference.
+          {capture.mode === "record" && !capture.recordingSupported && (
+            <span className="mt-1 block text-amber-800">
+              Live record is not supported in this browser — use Upload file instead.
+            </span>
+          )}
         </p>
       </div>
 

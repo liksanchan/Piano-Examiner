@@ -46,6 +46,10 @@ const AUDIO_MIMES: Record<string, AudioFileType> = {
 
   "audio/ogg": "ogg",
 
+  "video/webm": "webm",
+
+  "audio/aac": "m4a",
+
 };
 
 
@@ -55,6 +59,10 @@ export function detectAudioType(mime: string, filename: string): AudioFileType |
   const ext = path.extname(filename).toLowerCase();
 
   if (AUDIO_EXTENSIONS[ext]) return AUDIO_EXTENSIONS[ext];
+
+  const baseMime = mime.split(";")[0]?.trim().toLowerCase() ?? "";
+
+  if (AUDIO_MIMES[baseMime]) return AUDIO_MIMES[baseMime];
 
   if (AUDIO_MIMES[mime]) return AUDIO_MIMES[mime];
 
