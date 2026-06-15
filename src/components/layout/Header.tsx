@@ -30,18 +30,18 @@ export async function Header() {
             </>
           ) : (
             <>
-              <Link
+              <a
                 href="/login"
                 className="text-sm font-medium text-stone-600 hover:text-stone-900"
               >
                 Sign in
-              </Link>
-              <Link
+              </a>
+              <a
                 href="/signup"
                 className="rounded-lg bg-amber-800 px-3.5 py-1.5 text-sm font-semibold text-white transition hover:bg-amber-900"
               >
                 Get started
-              </Link>
+              </a>
             </>
           )}
         </nav>

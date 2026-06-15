@@ -1,14 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
+import { getPostLoginPath } from "@/lib/auth/redirect-path";
 
 export function LoginForm() {
-  const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +36,7 @@ export function LoginForm() {
         return;
       }
 
-      redirectAfterAuth(redirect);
+      redirectAfterAuth(getPostLoginPath());
     } catch {
       setError("Network error — the server may still be waking up. Wait a moment and try again.");
       setLoading(false);
@@ -107,9 +103,9 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-stone-600">
         No account yet?{" "}
-        <Link href="/signup" className="font-medium text-amber-800 hover:text-amber-900">
+        <a href="/signup" className="font-medium text-amber-800 hover:text-amber-900">
           Create one
-        </Link>
+        </a>
       </p>
     </form>
   );

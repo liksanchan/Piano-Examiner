@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
 
 export function SignupForm() {
@@ -133,9 +132,9 @@ export function SignupForm() {
 
       <p className="text-center text-sm text-stone-600">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-amber-800 hover:text-amber-900">
+        <a href="/login" className="font-medium text-amber-800 hover:text-amber-900">
           Sign in
-        </Link>
+        </a>
       </p>
     </form>
   );
