@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AudioCapturePanel } from "@/components/audio/AudioCapturePanel";
 import { useAudioCapture } from "@/hooks/use-audio-capture";
+import { audioFileForUpload } from "@/lib/upload/form-audio";
 
 export function PieceUpload() {
   const router = useRouter();
@@ -44,8 +45,7 @@ export function PieceUpload() {
     );
     formData.append(
       "audio",
-      capture.audioBlob,
-      capture.fileName ?? "reference.webm",
+      audioFileForUpload(capture.audioBlob, capture.fileName ?? "reference.webm"),
     );
 
     const res = await fetch("/api/pieces", {

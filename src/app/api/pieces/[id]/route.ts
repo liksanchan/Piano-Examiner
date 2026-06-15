@@ -12,15 +12,8 @@ import { getSession } from "@/lib/auth/session";
 
 import { deleteUserFile, saveUserFile } from "@/lib/storage/local";
 
-import {
-
-  audioExtension,
-
-  detectAudioType,
-
-  MAX_AUDIO_BYTES,
-
-} from "@/lib/upload/detect-file-type";
+import { audioExtension, MAX_AUDIO_BYTES } from "@/lib/upload/detect-file-type";
+import { parseFormDataAudio } from "@/lib/upload/form-audio";
 
 
 
@@ -67,46 +60,25 @@ export async function PATCH(
   try {
 
     const formData = await request.formData();
+    const parsed = await parseFormDataAudio(formData);
 
-    const audio = formData.get("audio");
-
-
-
-    if (!(audio instanceof File)) {
-
-      return NextResponse.json({ error: "An audio file is required." }, { status: 400 });
-
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-
-
-    if (audio.size > MAX_AUDIO_BYTES) {
-
+    if (parsed.size > MAX_AUDIO_BYTES) {
       return NextResponse.json({ error: "Audio must be 50 MB or smaller." }, { status: 400 });
-
     }
 
-
-
-    const audioType = detectAudioType(audio.type, audio.name);
-
-    if (!audioType) {
-
+    if (parsed.size < 1000) {
       return NextResponse.json(
-
-        { error: "Only MP3, WAV, WebM, M4A, MP4, and OGG audio files are allowed." },
-
+        { error: "That recording looks empty. Record again or upload a file." },
         { status: 400 },
-
       );
-
     }
 
-
-
-    const filename = `${id}${audioExtension(audioType)}`;
-
-    const buffer = Buffer.from(await audio.arrayBuffer());
+    const { audioType, buffer } = parsed;
+    const filename = `${id}-${Date.now()}${audioExtension(audioType)}`;
 
     const referenceAudioPath = await saveUserFile(
 
@@ -140,7 +112,7 @@ export async function PATCH(
 
         referenceAudioType: audioType,
 
-        fileSizeBytes: audio.size,
+        fileSizeBytes: parsed.size,
 
         updatedAt: new Date().toISOString(),
 

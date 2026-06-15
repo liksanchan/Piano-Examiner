@@ -8,6 +8,7 @@ import { useState } from "react";
 import { AudioCapturePanel } from "@/components/audio/AudioCapturePanel";
 import { useAudioCapture } from "@/hooks/use-audio-capture";
 import type { Piece } from "@/lib/db/schema";
+import { audioFileForUpload } from "@/lib/upload/form-audio";
 
 
 
@@ -27,10 +28,9 @@ function formatDate(iso: string) {
 
 
 
-function fileUrl(filePath: string) {
-
-  return `/api/files/${filePath.split("/").map(encodeURIComponent).join("/")}`;
-
+function fileUrl(filePath: string, cacheKey?: string | null) {
+  const base = `/api/files/${filePath.split("/").map(encodeURIComponent).join("/")}`;
+  return cacheKey ? `${base}?v=${encodeURIComponent(cacheKey)}` : base;
 }
 
 
@@ -51,10 +51,23 @@ function ReplaceAudioForm({ pieceId, onDone }: { pieceId: string; onDone: () => 
   const capture = useAudioCapture();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!capture.audioBlob) return;
+    setSaved(false);
+
+    if (!capture.audioBlob) {
+      setError("Please record or upload audio first.");
+      return;
+    }
+
+    if (capture.audioBlob.size < 1000) {
+      setError(
+        "That recording looks empty. Record again, allow microphone access, or use Upload file.",
+      );
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -62,8 +75,7 @@ function ReplaceAudioForm({ pieceId, onDone }: { pieceId: string; onDone: () => 
     const formData = new FormData();
     formData.append(
       "audio",
-      capture.audioBlob,
-      capture.fileName ?? "reference.webm",
+      audioFileForUpload(capture.audioBlob, capture.fileName ?? "reference.webm"),
     );
 
     const res = await fetch(`/api/pieces/${pieceId}`, {
@@ -80,6 +92,7 @@ function ReplaceAudioForm({ pieceId, onDone }: { pieceId: string; onDone: () => 
 
     capture.clearAudio();
     setLoading(false);
+    setSaved(true);
     onDone();
   }
 
@@ -95,18 +108,20 @@ function ReplaceAudioForm({ pieceId, onDone }: { pieceId: string; onDone: () => 
         disabled={loading}
         onStartRecording={async () => {
           setError(null);
-          capture.clearAudio();
+          setSaved(false);
           try {
             await capture.startRecording();
           } catch (err) {
             setError(err instanceof Error ? err.message : "Could not start recording.");
           }
         }}
-        onStopRecording={capture.stopRecording}
+        onStopRecording={() => {
+          void capture.stopRecording();
+        }}
         onFileSelected={(file) => {
           try {
             setError(null);
-            capture.clearAudio();
+            setSaved(false);
             capture.loadFile(file);
           } catch (err) {
             setError(err instanceof Error ? err.message : "Could not load file.");
@@ -116,12 +131,13 @@ function ReplaceAudioForm({ pieceId, onDone }: { pieceId: string; onDone: () => 
         uploadDescription="Upload a new reference file."
       />
       {error && <p className="text-xs text-red-600">{error}</p>}
+      {saved && <p className="text-xs text-green-700">Reference audio saved.</p>}
       <button
         type="submit"
         disabled={loading || !capture.audioBlob || capture.recording}
         className="rounded bg-stone-800 px-3 py-1 text-xs font-medium text-white disabled:opacity-60"
       >
-        {loading ? "Saving…" : "Replace audio"}
+        {loading ? "Saving…" : "Save audio"}
       </button>
     </form>
   );
@@ -337,7 +353,11 @@ export function PieceList({ items }: { items: Piece[] }) {
 
                     <p className="mb-2 text-xs font-bold text-amber-900">Reference recording</p>
 
-                    <audio controls src={fileUrl(item.referenceAudioPath)} className="w-full" />
+                    <audio
+                      controls
+                      src={fileUrl(item.referenceAudioPath, item.updatedAt)}
+                      className="w-full"
+                    />
 
                   </div>
 

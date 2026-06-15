@@ -102,8 +102,19 @@ export function useAudioCapture() {
   }, [clearAudio, setFromBlob]);
 
   const stopRecording = useCallback(() => {
-    mediaRecorderRef.current?.stop();
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") {
+      setRecording(false);
+      return Promise.resolve();
+    }
+
+    const stopped = new Promise<void>((resolve) => {
+      recorder.addEventListener("stop", () => resolve(), { once: true });
+    });
+
+    recorder.stop();
     setRecording(false);
+    return stopped;
   }, []);
 
   const loadFile = useCallback(
