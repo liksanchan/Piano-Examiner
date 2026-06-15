@@ -46,10 +46,21 @@ export async function verifySessionToken(
   }
 }
 
+function useSecureCookies() {
+  if (process.env.COOKIE_SECURE === "true") return true;
+  if (process.env.COOKIE_SECURE === "false") return false;
+  // Only require HTTPS on real deployments — not local `npm start` on http://localhost.
+  return Boolean(
+    process.env.RENDER ||
+      process.env.RENDER_EXTERNAL_URL ||
+      process.env.VERCEL_URL,
+  );
+}
+
 export function sessionCookieOptions(maxAge = 60 * 60 * 24 * 30) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies(),
     sameSite: "lax" as const,
     path: "/",
     maxAge,

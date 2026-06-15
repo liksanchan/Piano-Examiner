@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
 
@@ -13,28 +13,41 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [wakingUp, setWakingUp] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    setWakingUp(false);
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    const wakeTimer = window.setTimeout(() => setWakingUp(true), 4000);
 
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!res.ok) {
-      setError(data.error ?? "Unable to sign in.");
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(
+          typeof data.error === "string" ? data.error : "Unable to sign in.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      redirectAfterAuth(redirect);
+    } catch {
+      setError("Network error — the server may still be waking up. Wait a moment and try again.");
       setLoading(false);
-      return;
+    } finally {
+      window.clearTimeout(wakeTimer);
+      setWakingUp(false);
     }
-
-    router.push(redirect);
-    router.refresh();
   }
 
   return (
@@ -77,12 +90,19 @@ export function LoginForm() {
         </p>
       )}
 
+      {wakingUp && (
+        <p className="rounded-lg bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900" role="status">
+          Server is waking up — on the free tier this can take up to a minute. Please keep
+          waiting…
+        </p>
+      )}
+
       <button
         type="submit"
         disabled={loading}
         className="w-full rounded-lg bg-amber-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Signing in…" : "Sign in"}
+        {loading ? (wakingUp ? "Waking up server…" : "Signing in…") : "Sign in"}
       </button>
 
       <p className="text-center text-sm text-stone-600">

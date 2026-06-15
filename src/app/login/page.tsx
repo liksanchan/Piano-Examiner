@@ -21,6 +21,10 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-stone-600">
             Sign in to access your songs and performance history.
           </p>
+          <p className="mt-3 text-xs text-stone-500">
+            On the hosted free tier, the app sleeps when idle — the first sign-in after a
+            break can take 30–60 seconds.
+          </p>
         </div>
 
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
