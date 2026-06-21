@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioCapturePanel } from "@/components/audio/AudioCapturePanel";
 import { useAudioCapture } from "@/hooks/use-audio-capture";
 import type { ExaminerMode } from "@/lib/db/schema";
+import {
+  getEvalProgressStage,
+  getEvalTimeHint,
+} from "@/lib/evaluation/eval-progress-ui";
 import { audioFileForUpload } from "@/lib/upload/form-audio";
 import {
   clearPracticeRecording,
@@ -54,7 +58,9 @@ export function RecordingStudio({
   const [lastResultId, setLastResultId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [evalElapsedSeconds, setEvalElapsedSeconds] = useState(0);
   const [restoring, setRestoring] = useState(true);
+  const evalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isAccuracyMode = examinerMode === "accuracy100";
 
@@ -123,6 +129,29 @@ export function RecordingStudio({
   const toggleSetting = (key: keyof typeof settings) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  useEffect(() => {
+    if (!submitting) {
+      if (evalTimerRef.current) {
+        clearInterval(evalTimerRef.current);
+        evalTimerRef.current = null;
+      }
+      setEvalElapsedSeconds(0);
+      return;
+    }
+
+    setEvalElapsedSeconds(0);
+    evalTimerRef.current = setInterval(() => {
+      setEvalElapsedSeconds((s) => s + 1);
+    }, 1000);
+
+    return () => {
+      if (evalTimerRef.current) {
+        clearInterval(evalTimerRef.current);
+        evalTimerRef.current = null;
+      }
+    };
+  }, [submitting]);
 
   async function handleSubmit() {
     if (!capture.audioBlob) {
@@ -302,13 +331,31 @@ export function RecordingStudio({
           </p>
         )}
 
+        {submitting && (
+          <div
+            className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="text-sm font-medium text-amber-950">
+              {getEvalProgressStage(evalElapsedSeconds)}
+            </p>
+            <p className="mt-1 text-xs text-amber-900/80">
+              {getEvalTimeHint(capture.recordingSeconds > 0 ? capture.recordingSeconds : null)}
+            </p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-amber-200/80">
+              <div className="h-full w-1/3 animate-[eval-indeterminate_1.4s_ease-in-out_infinite] rounded-full bg-amber-700" />
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!capture.audioBlob || submitting || capture.recording || restoring}
           className="mt-5 w-full rounded-lg bg-amber-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
-          {submitting ? "Analyzing your performance… (can take 1–3 min)" : "Submit for examiner feedback"}
+          {submitting ? "Analyzing your performance…" : "Submit for examiner feedback"}
         </button>
 
         {lastResultId && (

@@ -4,6 +4,10 @@ import { getUploadDir } from "@/lib/db/paths";
 import { buildAccuracy100Evaluation } from "@/lib/evaluation/accuracy100";
 import { calibrateEvaluation } from "@/lib/evaluation/calibrate";
 import { generateGeminiReview } from "@/lib/evaluation/gemini";
+import {
+  getCachedReferenceMidiPath,
+  getReferenceMidiCachePath,
+} from "@/lib/evaluation/reference-midi-cache";
 import { runAnalysisPipeline } from "@/lib/evaluation/python-pipeline";
 import { buildRuleBasedEvaluation } from "@/lib/evaluation/rules";
 import type { EvaluationOptions, EvaluationResult } from "@/lib/evaluation/types";
@@ -33,9 +37,21 @@ export async function evaluatePerformance(
     checkExpression: performance.checkExpression,
   };
 
+  const cachedRefMidi = await getCachedReferenceMidiPath(piece.referenceAudioPath);
+
   const metrics = await runAnalysisPipeline(
     resolveAudioPath(piece.referenceAudioPath),
     resolveAudioPath(performance.audioPath),
+    {
+      referenceMidiPath: cachedRefMidi,
+      referenceMidiCachePath: cachedRefMidi
+        ? undefined
+        : path.join(getUploadDir(), getReferenceMidiCachePath(piece.referenceAudioPath)),
+      skipAudioAnalysis:
+        !performance.checkTempo &&
+        !performance.checkDynamics &&
+        !performance.checkExpression,
+    },
   );
 
   let result: EvaluationResult;

@@ -14,6 +14,7 @@ import { deleteUserFile, saveUserFile } from "@/lib/storage/local";
 
 import { audioExtension, MAX_AUDIO_BYTES } from "@/lib/upload/detect-file-type";
 import { parseFormDataAudio } from "@/lib/upload/form-audio";
+import { invalidateReferenceMidiCache } from "@/lib/evaluation/reference-midi-cache";
 
 
 
@@ -95,9 +96,8 @@ export async function PATCH(
 
 
     if (piece.referenceAudioPath) {
-
+      await invalidateReferenceMidiCache(piece.referenceAudioPath).catch(() => undefined);
       await deleteUserFile(piece.referenceAudioPath).catch(() => undefined);
-
     }
 
 
@@ -181,9 +181,8 @@ export async function DELETE(
   try {
 
     if (piece.referenceAudioPath) {
-
+      await invalidateReferenceMidiCache(piece.referenceAudioPath).catch(() => undefined);
       await deleteUserFile(piece.referenceAudioPath).catch(() => undefined);
-
     }
 
 

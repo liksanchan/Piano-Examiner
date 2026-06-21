@@ -4,6 +4,12 @@ import type { AnalysisMetrics } from "@/lib/evaluation/types";
 
 const PIPELINE_TIMEOUT_MS = 10 * 60 * 1000;
 
+export interface PipelineOptions {
+  referenceMidiPath?: string | null;
+  referenceMidiCachePath?: string;
+  skipAudioAnalysis?: boolean;
+}
+
 function resolvePythonCommand() {
   const configured = process.env.PYTHON_PATH ?? "python";
   const parts = configured.trim().split(/\s+/);
@@ -18,22 +24,32 @@ function resolvePythonCommand() {
 export async function runAnalysisPipeline(
   referenceAudioPath: string,
   studentAudioPath: string,
+  options: PipelineOptions = {},
 ): Promise<AnalysisMetrics> {
   const scriptPath = path.join(process.cwd(), "python", "evaluate.py");
   const { command, prefixArgs } = resolvePythonCommand();
 
+  const args = [
+    ...prefixArgs,
+    scriptPath,
+    "--reference",
+    referenceAudioPath,
+    "--student",
+    studentAudioPath,
+  ];
+
+  if (options.referenceMidiPath) {
+    args.push("--reference-midi", options.referenceMidiPath);
+  }
+  if (options.referenceMidiCachePath) {
+    args.push("--reference-midi-cache", options.referenceMidiCachePath);
+  }
+  if (options.skipAudioAnalysis) {
+    args.push("--skip-audio-analysis");
+  }
+
   return new Promise((resolve, reject) => {
-    const proc = spawn(
-      command,
-      [
-        ...prefixArgs,
-        scriptPath,
-        "--reference",
-        referenceAudioPath,
-        "--student",
-        studentAudioPath,
-      ],
-      {
+    const proc = spawn(command, args, {
         cwd: process.cwd(),
         env: process.env,
         windowsHide: true,

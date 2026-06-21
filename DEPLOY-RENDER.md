@@ -148,8 +148,11 @@ AI evaluation is heavy. On free tier, long recordings may fail with out-of-memor
 
 **Tips:**
 
-- Use shorter recordings while testing
+- Use shorter recordings while testing (under 1–2 minutes is ideal)
 - If logs show out-of-memory errors, upgrade to **Standard** (2 GB RAM) or use shorter audio
+- **Note Accuracy (out of 100)** mode skips tempo/dynamics analysis and is usually **fastest** — good for quick checks on free tier
+- The **first** evaluation of a song transcribes the reference audio; **later** submissions reuse a cached reference MIDI and are faster
+- Leave **`GEMINI_API_KEY` empty** if you only need scores (no AI-written feedback) — that saves a few seconds per submit
 
 ### Data loss on redeploy
 
@@ -181,6 +184,7 @@ Render auto-deploys from GitHub. Watch the **Logs** tab for the new build.
 | `502 Bad Gateway` | Service still starting — wait 1–2 min after deploy |
 | Very slow first load | Free tier waking from sleep — normal |
 | Evaluation fails | Check logs for Python errors; confirm `GEMINI_API_KEY` if using Gemini |
+| Evaluation very slow (1–3+ min) | Normal on free tier — use shorter clips, **Note Accuracy** mode, or wait for reference MIDI cache on repeat submits |
 | Sign up works but songs vanish | Redeploy wiped ephemeral data — re-upload, or add persistent disk |
 | `Invalid session` | `SESSION_SECRET` changed between deploys — log in again |
 
