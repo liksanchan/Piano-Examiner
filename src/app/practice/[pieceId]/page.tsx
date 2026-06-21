@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUser, requireUser } from "@/lib/auth/session";
 
 import { getPiece } from "@/lib/db/pieces";
 
@@ -50,14 +50,9 @@ export default async function PracticePage({
 
 }) {
 
-  const user = await getCurrentUser();
-
-  if (!user) redirect("/login");
-
-
+  const user = await requireUser();
 
   const { pieceId } = await params;
-
   const piece = await getPiece(pieceId, user.id);
 
 

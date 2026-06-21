@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-import { redirect } from "next/navigation";
-
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 
 import { listPieces } from "@/lib/db/pieces";
 
@@ -22,20 +20,9 @@ export const metadata = {
 
 export default async function DashboardPage() {
 
-  const user = await getCurrentUser();
-
-
-
-  if (!user) {
-
-    redirect("/login");
-
-  }
-
-
+  const user = await requireUser();
 
   const items = await listPieces(user.id);
-
   const displayName = user.displayName ?? user.email.split("@")[0] ?? "Pianist";
 
 

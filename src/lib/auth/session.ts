@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -86,13 +87,24 @@ export async function getCurrentUser(): Promise<
     columns: { id: true, email: true, displayName: true },
   });
 
-  if (!user) {
-    // Stale cookie (e.g. after Render redeploy wiped the DB) — clear it to avoid redirect loops.
-    await clearSessionCookie();
-    return null;
+  // Stale cookie (e.g. after Render redeploy wiped the DB) — treat as logged out.
+  // Cookie clearing happens in middleware (invalid JWT) or on next login (overwrites).
+  return user ?? null;
+}
+
+/** Redirect to login; clears stale session cookies via a Route Handler when needed. */
+export async function requireUser(): Promise<
+  Pick<User, "id" | "email" | "displayName">
+> {
+  const user = await getCurrentUser();
+  if (user) return user;
+
+  const session = await getSession();
+  if (session) {
+    redirect("/api/auth/clear-session?redirect=/login");
   }
 
-  return user;
+  redirect("/login");
 }
 
 export async function jsonWithSession<T extends Record<string, unknown>>(

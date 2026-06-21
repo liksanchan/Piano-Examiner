@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { performances, pieces } from "@/lib/db/schema";
 import { ResultsView } from "@/components/results/ResultsView";
@@ -15,8 +15,7 @@ export default async function ResultsPage({
 }: {
   params: Promise<{ performanceId: string }>;
 }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const { performanceId } = await params;
   const db = getDb();
